@@ -41,7 +41,7 @@ public class RateLimitFilter implements Filter {
             info = new ClientRequestInfo(now, 0);
         }
 
-        if (info.requestCount >= MAX_REQUESTS && false) {
+        if (info.requestCount >= MAX_REQUESTS) {
             ((HttpServletResponse) response).setStatus(429); // HttpServletResponse.SC_TOO_MANY_REQUESTS
             response.getWriter().write("Rate limit exceeded. Try again later.");
             return;
