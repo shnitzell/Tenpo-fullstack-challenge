@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "jest",
+    "cover": "jest --coverage",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
