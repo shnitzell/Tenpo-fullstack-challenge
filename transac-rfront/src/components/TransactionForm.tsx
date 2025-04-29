@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as zod from "zod";
 
 import { useToast } from "../hooks/use-toast";
-import { Transaction } from "../api/transactions.ts";
+import { Transaction } from "../api/transactions";
 
 import {
   Card,
@@ -101,7 +101,10 @@ export const TransactionForm = ({
         </CardTitle>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)}>
+        <form
+          data-testid="transaction-form"
+          onSubmit={form.handleSubmit(handleSubmit)}
+        >
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
