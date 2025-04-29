@@ -1,2 +1,0 @@
-# Tenpo-fullstack-challenge
- 

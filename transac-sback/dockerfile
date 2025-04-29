@@ -1,0 +1,14 @@
+# Usa imagen de Java 17
+FROM openjdk:17-jdk-slim
+
+# Directorio de trabajo
+WORKDIR /app
+
+# Copiar el jar construido
+COPY target/backend-0.0.1-SNAPSHOT.jar app.jar
+
+# Puerto expuesto
+EXPOSE 8080
+
+# Comando para correr la app
+ENTRYPOINT ["java", "-jar", "app.jar"]
