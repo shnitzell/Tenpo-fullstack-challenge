@@ -1,82 +1,187 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createTransaction, Transaction } from "../api/transactions.ts";
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as zod from "zod";
 
-export const TransactionForm = () => {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: createTransaction,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+import { useToast } from "../hooks/use-toast";
+import { Transaction } from "../api/transactions.ts";
+
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
+
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import { useForm } from "react-hook-form";
+
+interface TransactionFormProps {
+  transaction: Transaction | null;
+  onSubmit: (transaction: Transaction) => void;
+  onCancel: () => void;
+}
+
+const transactionSchema = zod.object({
+  id: zod.number().optional(),
+  amount: zod.coerce
+    .number()
+    .positive("El monto debe ser positivo")
+    .int("El monto debe ser un número entero"),
+  commerce: zod
+    .string()
+    .min(2, "El comercio debe tener al menos 2 caracteres")
+    .max(100, "El comercio no puede exceder los 100 caracteres"),
+  tenpistaName: zod
+    .string()
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .max(100, "El nombre no puede exceder los 100 caracteres"),
+  transactionDate: zod.string().refine((date) => {
+    const now = new Date();
+    const transactionDate = new Date(date);
+    return transactionDate <= now;
+  }, "La fecha no puede ser futura"),
+});
+
+export const TransactionForm = ({
+  transaction,
+  onSubmit,
+  onCancel,
+}: TransactionFormProps) => {
+  const isNew = transaction === null;
+  const { toast } = useToast();
+
+  const form = useForm<zod.infer<typeof transactionSchema>>({
+    resolver: zodResolver(transactionSchema),
+    defaultValues: {
+      id: transaction?.id,
+      amount: transaction?.amount ?? 0,
+      commerce: transaction?.commerce ?? "",
+      tenpistaName: transaction?.tenpistaName ?? "",
+      transactionDate: transaction?.transactionDate
+        ? new Date(transaction.transactionDate).toISOString().slice(0, 16)
+        : new Date().toISOString().slice(0, 16),
     },
   });
 
-  const [form, setForm] = useState<Transaction>({
-    amount: 0,
-    commerce: "",
-    tenpistaName: "",
-    transactionDate: "",
-  });
+  const handleSubmit = (values: zod.infer<typeof transactionSchema>) => {
+    try {
+      const formattedTransaction: Transaction = {
+        id: values.id,
+        amount: values.amount,
+        commerce: values.commerce,
+        tenpistaName: values.tenpistaName,
+        transactionDate: values.transactionDate,
+      };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    mutation.mutate(form);
+      onSubmit(formattedTransaction);
+    } catch (error) {
+      console.log(error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Ocurrió un error al guardar la transacción",
+      });
+    }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10">
-      <h1 className="text-2xl font-bold mb-6">New Transaction</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="number"
-          name="amount"
-          placeholder="Amount"
-          value={form.amount}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          {isNew ? "Nueva Transacción" : "Editar Transacción"}
+        </CardTitle>
+      </CardHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)}>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Monto (CLP)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="Ingrese el monto"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <input
-          type="text"
-          name="commerce"
-          placeholder="Commerce"
-          value={form.commerce}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
+            <FormField
+              control={form.control}
+              name="commerce"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Comercio</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Ingrese el nombre del comercio"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <input
-          type="text"
-          name="tenpistaName"
-          placeholder="Tenpista Name"
-          value={form.tenpistaName}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
+            <FormField
+              control={form.control}
+              name="tenpistaName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre del Tenpista</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Ingrese el nombre del Tenpista"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <input
-          type="datetime-local"
-          name="transactionDate"
-          value={form.transactionDate}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
+            <FormField
+              control={form.control}
+              name="transactionDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fecha y Hora</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="datetime-local"
+                      {...field}
+                      max={new Date().toISOString().slice(0, 16)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
 
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-        >
-          Save
-        </button>
-      </form>
-    </div>
+          <CardFooter className="flex justify-between">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button type="submit">{isNew ? "Crear" : "Actualizar"}</Button>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
   );
 };

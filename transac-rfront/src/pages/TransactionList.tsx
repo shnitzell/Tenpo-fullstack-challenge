@@ -31,9 +31,11 @@ import {
 import { Edit, Trash2, Plus } from "lucide-react";
 
 import {
+  createTransaction,
   deleteTransaction,
   getTransactions,
   Transaction,
+  updateTransaction,
 } from "../api/transactions.ts";
 import { TransactionForm } from "../components/TransactionForm.tsx";
 
@@ -55,6 +57,35 @@ export const TransactionList = () => {
   const { data, isLoading, isError } = useQuery<Transaction[]>({
     queryKey: ["transactions"],
     queryFn: getTransactions,
+  });
+
+  const { mutate: editMutation } = useMutation({
+    mutationFn: (transaction: Transaction) => {
+      if (transaction.id) {
+        return updateTransaction(transaction);
+      } else {
+        return createTransaction(transaction);
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Transacción guardada",
+        description: "La transacción ha sido guardada correctamente",
+      });
+      setShowForm(false);
+      setCurrentTransaction(null);
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    },
+    onError: (err) => {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo guardar la transacción",
+      });
+      setShowForm(false);
+      setCurrentTransaction(null);
+    },
   });
 
   const { mutate: deleteMutation } = useMutation({
@@ -94,6 +125,7 @@ export const TransactionList = () => {
       deleteMutation(transactionToDelete);
     }
   };
+  const handleFormSubmit = editMutation;
   const handleAddNew = () => {
     setCurrentTransaction(null);
     setShowForm(true);
@@ -201,12 +233,13 @@ export const TransactionList = () => {
 
       {showForm && (
         <TransactionForm
-        //transaction={currentTransaction}
-        //onSubmit={handleFormSubmit}
-        //onCancel={() => {
-        //setShowForm(false);
-        //setCurrentTransaction(null);
-        //}}
+          key={currentTransaction?.id || "new"}
+          transaction={currentTransaction}
+          onSubmit={handleFormSubmit}
+          onCancel={() => {
+            setShowForm(false);
+            setCurrentTransaction(null);
+          }}
         />
       )}
 
